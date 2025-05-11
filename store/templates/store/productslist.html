@@ -1,0 +1,162 @@
+{% extends "store/base.html" %}
+{% load static %}
+{% load render_table from django_tables2 %}
+{% load querystring from django_tables2 %}
+{% load store_extras %}
+{% block title %}Products{% endblock title %}
+{% block content %}
+<div class="container my-4">
+    <!-- Header Section -->
+    <div class="card shadow-sm rounded p-3 mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h4 class="display-6 mb-0 text-success">Products</h4>
+            </div>
+            <div class="col-md-6 d-flex justify-content-end gap-2">
+                <a class="btn btn-success btn-sm rounded-pill shadow-sm" href="{% url 'product-create' %}">
+                    <i class="fa-solid fa-plus"></i> Add Product
+                </a>
+                <a class="btn btn-success btn-sm rounded-pill shadow-sm" href="{% url 'category-list' %}">
+                    <i class="fa-solid fa-tags"></i> Categories
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card shadow-sm rounded p-3 mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-0">View Mode</h5>
+            </div>
+            <div class="col-md-6 d-flex justify-content-end">
+                <div class="btn-group" role="group" aria-label="Warehouse View Mode">
+                    <a href="{% url 'productslist' %}?view_mode=all" 
+                       class="btn {% if view_mode == 'all' %}btn-success{% else %}btn-outline-success{% endif %}">
+                        <i class="fa fa-globe me-1"></i> All Warehouses
+                    </a>
+                    {% if request.session.current_warehouse %}
+                    <a href="{% url 'productslist' %}?view_mode=current" 
+                       class="btn {% if view_mode == 'current' %}btn-success{% else %}btn-outline-success{% endif %}">
+                        <i class="fa fa-warehouse me-1"></i> {{ request.session.current_warehouse.name }}
+                    </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary" disabled>
+                        <i class="fa fa-warehouse me-1"></i> No Warehouse Selected
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card shadow-sm rounded">
+        <div class="card-body">
+            {% if view_mode == 'current' and current_warehouse %}
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle me-2"></i> Showing products in warehouse: <strong>{{ current_warehouse.name }}</strong>
+            </div>
+            {% endif %}
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            {% if view_mode == 'all' %}
+                            <th>Total Quantity</th>
+                            {% else %}
+                            <th>Warehouse Quantity</th>
+                            {% endif %}
+                            <th>Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.category.name }}</td>
+                            {% if view_mode == 'all' %}
+                            <td>{{ item.quantity }}</td>
+                            {% else %}
+                            <td>{{ inventory_map|get_item:item.id|default:"0" }}</td>
+                            {% endif %}
+                            <td>${{ item.price }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'product-detail' item.slug %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fa fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'product-update' item.slug %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fa fa-edit"></i>
+                                    </a>
+                                    {% if view_mode == 'current' and current_warehouse %}
+                                    <a href="{% url 'manage-inventory' item.id current_warehouse.warehouse_id %}" class="btn btn-sm btn-outline-success">
+                                        <i class="fa fa-boxes"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                {% if view_mode == 'current' %}
+                                No products found in this warehouse.
+                                {% else %}
+                                No products found.
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&view_mode={{ view_mode }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </span>
+                    </li>
+                    {% endif %}
+                    {% for i in paginator.page_range %}
+                    {% if page_obj.number == i %}
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ i }} <span class="visually-hidden">(current)</span></span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}&view_mode={{ view_mode }}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&view_mode={{ view_mode }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock content %}

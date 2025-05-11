@@ -1,0 +1,84 @@
+{% extends "store/base.html" %}
+{% load static %}
+
+{% block title %}Warehouses{% endblock title %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="card shadow-sm rounded p-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h4 class="display-6 mb-0 text-success">Warehouses</h4>
+            </div>
+            <div class="col-md-6 d-flex justify-content-end gap-2">
+                <a class="btn btn-success btn-sm rounded-pill shadow-sm" href="{% url 'warehouse-create' %}">
+                    <i class="fa-solid fa-plus"></i> Add Warehouse
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_warehouse %}
+<div class="container mb-4">
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <div>
+            <strong>Current Warehouse:</strong> {{ current_warehouse.name }}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="container mb-4">
+    <div class="alert alert-warning">
+        <strong>No warehouse selected!</strong> Please select a warehouse to continue.
+    </div>
+</div>
+{% endif %}
+
+<div class="container">
+    <div class="row">
+        {% for warehouse in warehouses %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{{ warehouse.name }}</h5>
+                    {% if current_warehouse and current_warehouse.id == warehouse.warehouse_id %}
+                    <span class="badge bg-success">Current</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        <strong>ID:</strong> {{ warehouse.warehouse_id }}<br>
+                        {% if warehouse.description %}
+                        <strong>Description:</strong> {{ warehouse.description }}<br>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-footer bg-white d-flex justify-content-between">
+                    <div>
+                        <a href="{% url 'warehouse-detail' warehouse.warehouse_id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fa-solid fa-eye"></i> View
+                        </a>
+                        <a href="{% url 'warehouse-update' warehouse.warehouse_id %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fa-solid fa-edit"></i> Edit
+                        </a>
+                    </div>
+                    {% if not current_warehouse or current_warehouse.id != warehouse.warehouse_id %}
+                    <a href="{% url 'set-current-warehouse' warehouse.warehouse_id %}?next={{ request.path }}" 
+                       class="btn btn-sm btn-success">
+                        <i class="fa-solid fa-check"></i> Set as Current
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No warehouses found. <a href="{% url 'warehouse-create' %}" class="alert-link">Create one</a>!
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %} 

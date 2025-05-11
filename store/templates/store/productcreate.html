@@ -1,0 +1,224 @@
+{% extends "store/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load store_extras %}
+
+{% block title %}
+    {% if request.GET.step == '2' %}
+    Distribute Product - Step 2
+    {% else %}
+    Add Product - Step 1
+    {% endif %}
+{% endblock title %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-sm border-light">
+                <div class="card-header bg-light">
+                    <ul class="nav nav-pills card-header-pills">
+                        <li class="nav-item">
+                            <a class="nav-link {% if not request.GET.step or request.GET.step == '1' %}active bg-success{% else %}text-success{% endif %}" href="{% url 'product-create' %}">
+                                <i class="fa fa-info-circle me-1"></i> Step 1: Product Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.GET.step == '2' %}active bg-success{% else %}text-success{% endif %} {% if not form_data %}disabled{% endif %}" 
+                               href="{% if form_data %}{% url 'product-create' %}?step=2{% else %}#{% endif %}">
+                                <i class="fa fa-warehouse me-1"></i> Step 2: Warehouse Distribution
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    {% if not request.GET.step or request.GET.step == '1' %}
+                    <!-- Step 1: Product Details -->
+                    <h1 class="text-center mb-4">
+                        Add Product
+                    </h1>
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="step" value="1">
+                        
+                        {{ form|crispy }}
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'productslist' %}" class="btn btn-outline-secondary">
+                                <i class="fa fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fa fa-arrow-right"></i> Next: Distribute to Warehouses
+                            </button>
+                        </div>
+                    </form>
+                    
+                    {% elif request.GET.step == '2' %}
+                    <!-- Step 2: Warehouse Distribution -->
+                    <h1 class="text-center mb-4">
+                        Distribute Product to Warehouses
+                    </h1>           
+                    <!-- Product Summary -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Product Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Name:</strong> {{ form_data.name|default:"" }}</p>
+                                    <p><strong>Category:</strong> 
+                                    {% if form_data.category %}
+                                        {{ form.fields.category.choices|dictsort:"1"|dict_lookup:form_data.category }}
+                                    {% else %}
+                                        Not specified
+                                    {% endif %}
+                                    </p>
+                                    <p><strong>Price:</strong> ${{ form_data.price|default:"0.00" }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Total Quantity:</strong> {{ form_data.quantity|default:"0" }}</p>
+                                    {% if form_data.vendor %}
+                                    <p><strong>Vendor:</strong> {{ form.fields.vendor.choices|dictsort:"1"|dict_lookup:form_data.vendor }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="fa fa-info-circle me-2"></i> You need to distribute <strong>{{ form_data.quantity|default:"0" }}</strong> units across warehouses.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% with remaining_quantity=form_data.quantity|default:"0"|subtract:warehouse_distribution %}
+                    {% if warehouse_distribution %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Current Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Warehouse</th>
+                                            <th>Quantity</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dist in warehouse_distribution %}
+                                        <tr>
+                                            <td>{{ dist.warehouse_name }}</td>
+                                            <td>{{ dist.quantity }}</td>
+                                            <td>
+                                                <form method="POST">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="step" value="2">
+                                                    <input type="hidden" name="remove_warehouse" value="{{ dist.warehouse_id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fa fa-trash"></i> Remove
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        <tr class="table-info">
+                                            <td><strong>Total Distributed</strong></td>
+                                            <td><strong>{{ warehouse_distribution|sum_quantity }}</strong></td>
+                                            <td></td>
+                                        </tr>
+                                        <tr class="table-warning">
+                                            <td><strong>Remaining</strong></td>
+                                            <td><strong>{{ remaining_quantity }}</strong></td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Add to Warehouse</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="step" value="2">
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="warehouse" class="form-label">Warehouse</label>
+                                            <select class="form-select" id="warehouse" name="warehouse" required>
+                                                <option value="">Select Warehouse</option>
+                                                {% for warehouse in warehouses %}
+                                                <option value="{{ warehouse.warehouse_id }}" 
+                                                        {% if warehouse_distribution|is_warehouse_used:warehouse.warehouse_id %}
+                                                        disabled class="text-muted"
+                                                        {% endif %}>
+                                                    {{ warehouse.name }}
+                                                    {% if warehouse_distribution|is_warehouse_used:warehouse.warehouse_id %}
+                                                    (Already added)
+                                                    {% endif %}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="quantity" class="form-label">Quantity</label>
+                                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                                   min="1" max="{{ remaining_quantity }}" 
+                                                   value="{{ remaining_quantity }}" required
+                                                   data-max-remaining="{{ remaining_quantity }}">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary" {% if remaining_quantity <= 0 %}disabled{% endif %}>
+                                        <i class="fa fa-plus"></i> Add to Warehouse
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'product-create' %}" class="btn btn-outline-secondary">
+                            <i class="fa fa-arrow-left"></i> Back to Step 1
+                        </a>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="step" value="2">
+                            <input type="hidden" name="save_product" value="1">
+                            <button type="submit" class="btn btn-success" 
+                                    {% if remaining_quantity != 0 %}disabled{% endif %}>
+                                <i class="fa fa-save"></i> Save Product
+                            </button>
+                        </form>
+                    </div>
+                    {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+        $('#warehouse').change(function() {
+            var maxRemainingQuantity = $('#quantity').data('max-remaining');
+            if (maxRemainingQuantity) {
+                $('#quantity').val(maxRemainingQuantity);
+            }
+        });
+    });
+</script>
+{% endblock javascripts %}

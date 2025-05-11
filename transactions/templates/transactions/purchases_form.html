@@ -1,0 +1,327 @@
+{% extends 'store/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.id %}
+        Update Purchase
+    {% else %}
+        Create Purchase
+    {% endif %}
+{% endblock title %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        {% if form.instance.id %}
+                            Update Purchase
+                        {% else %}
+                            Create Purchase
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-pills mb-4">
+                        <li class="nav-item">
+                            <a class="nav-link {% if step == '1' %}active{% endif %}" href="{% url 'purchase-create' %}?step=1">
+                                <i class="fas fa-shopping-cart"></i> Step 1: Purchase Details
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if step == '2' %}active{% endif %} {% if not form_data %}disabled{% endif %}" 
+                               href="{% if form_data %}{% url 'purchase-create' %}?step=2{% else %}#{% endif %}">
+                                <i class="fas fa-warehouse"></i> Step 2: Warehouse Distribution
+                            </a>
+                        </li>
+                    </ul>
+                    {% if step == '1' %}
+                        <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+                            <input type="hidden" name="step" value="1">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.item|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.vendor|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ form.description|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.quantity|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.price|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.delivery_date|as_crispy_field }}
+            </div>
+            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ form.delivery_status|as_crispy_field }}
+            </div>
+        </div>
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'purchaseslist' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Purchases
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-arrow-right"></i> Next: Warehouse Distribution
+                                </button>
+                            </div>
+                        </form>
+                    
+                    {% elif step == '2' %}
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="alert alert-info">
+                                    <h5 class="mb-2"><i class="fas fa-info-circle"></i> Purchase Summary</h5>
+        <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Item:</strong> {{ form_data.item_name }}</p>
+                                            <p><strong>Vendor:</strong> {{ form_data.vendor_name }}</p>
+                                            <p><strong>Description:</strong> {{ form_data.description }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Total Quantity:</strong> <span id="total-quantity">{{ form_data.quantity }}</span></p>
+                                            <p><strong>Price:</strong> ${{ form_data.price }}</p>
+                                            <p><strong>Delivery Date:</strong> {{ form_data.delivery_date }}</p>
+                                        </div>
+                                    </div>
+            </div>
+            </div>
+        </div>
+                        
+        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card shadow-sm mb-4">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Add Warehouse Distribution</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form method="post" id="distribution-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="step" value="2">
+                                            
+                                            <div class="mb-3">
+                                                <label for="warehouse" class="form-label">Warehouse</label>
+                                                <select name="warehouse" id="warehouse" class="form-select" required>
+                                                    <option value="">Select Warehouse</option>
+                                                    {% for warehouse in warehouses %}
+                                                        <option value="{{ warehouse.warehouse_id }}">{{ warehouse.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="quantity" class="form-label">Quantity</label>
+                                                <input type="number" name="quantity" id="quantity" class="form-control" min="1" max="{{ remaining_quantity }}" required>
+                                                <div class="form-text">
+                                                    Remaining to distribute: <span id="remaining-quantity" class="fw-bold text-primary">{{ remaining_quantity }}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-success" id="add-distribution-btn">
+                                                <i class="fas fa-plus"></i> Add to Distribution
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0"><i class="fas fa-list"></i> Current Distribution</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span>Distribution Progress</span>
+                                                <span><span id="total-distributed">{{ total_distributed }}</span> / <span id="total-quantity-display">{{ total_quantity }}</span></span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar {% if is_fully_distributed %}bg-success{% else %}bg-primary{% endif %}" 
+                                                     role="progressbar" 
+                                                     style="width: {% if total_quantity == 0 %}0{% elif is_fully_distributed %}100{% else %}{% widthratio total_distributed total_quantity 100 %}{% endif %}%;" 
+                                                     aria-valuenow="{{ total_distributed }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="{{ total_quantity }}"
+                                                     id="distribution-progress-bar">
+                                                    {% if total_quantity == 0 %}0%{% elif is_fully_distributed %}Complete{% else %}{% widthratio total_distributed total_quantity 100 %}%{% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if warehouse_distribution %}
+                                            <div class="table-responsive">
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Warehouse</th>
+                                                            <th>Quantity</th>
+                                                            <th>Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="distribution-table-body">
+                                                        {% for dist in warehouse_distribution %}
+                                                            <tr>
+                                                                <td>{{ dist.warehouse_name }}</td>
+                                                                <td>{{ dist.quantity }}</td>
+                                                                <td>
+                                                                    <form method="post" class="d-inline remove-distribution-form">
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="step" value="2">
+                                                                        <input type="hidden" name="remove_warehouse" value="{{ dist.warehouse_id }}">
+                                                                        <button type="submit" class="btn btn-sm btn-danger">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </form>
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                    <tfoot>
+                                                        <tr class="table-primary">
+                                                            <th>Total</th>
+                                                            <th id="table-total-distributed">{{ total_distributed }}</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                            
+                                            <div id="distribution-status-container">
+                                            {% if is_fully_distributed %}
+                                                <div class="alert alert-success mt-3" id="fully-distributed-alert">
+                                                    <i class="fas fa-check-circle"></i> All quantities have been distributed. You can now save the purchase.
+                                                </div>
+                                            {% else %}
+                                                <div class="alert alert-info mt-3" id="partially-distributed-alert">
+                                                    <i class="fas fa-info-circle"></i> 
+                                                    Please distribute the remaining <span class="remaining-quantity-display">{{ remaining_quantity }}</span> units before saving.
+                                                </div>
+                                            {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning" id="no-distribution-alert">
+                                                <i class="fas fa-exclamation-triangle"></i> No warehouses added yet. Please add at least one warehouse distribution.
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'purchase-create' %}?step=1" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Purchase Details
+                            </a>
+                            
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="step" value="2">
+                                <input type="hidden" name="save_purchase" value="1">
+                                
+                                <button type="submit" class="btn btn-primary" id="save-purchase-btn" {% if not is_fully_distributed %}disabled{% endif %}>
+                                    <i class="fas fa-save"></i> Save Purchase
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extrascripts %}
+<script>
+    $(document).ready(function() {
+        function updateRemainingQuantity() {
+            var totalQuantity = parseInt($('#total-quantity').text());
+            var totalDistributed = parseInt($('#total-distributed').text());
+            
+            if (isNaN(totalQuantity)) totalQuantity = 0;
+            if (isNaN(totalDistributed)) totalDistributed = 0;
+            
+            var remainingQuantity = Math.max(0, totalQuantity - totalDistributed);
+            
+            $('#remaining-quantity').text(remainingQuantity);
+            $('.remaining-quantity-display').text(remainingQuantity);
+
+            $('#quantity').attr('max', remainingQuantity);
+            
+            var percentComplete = totalQuantity > 0 ? Math.round((totalDistributed / totalQuantity) * 100) : 0;
+            $('#distribution-progress-bar').css('width', percentComplete + '%');
+            $('#distribution-progress-bar').attr('aria-valuenow', totalDistributed);
+            
+            if (totalDistributed === totalQuantity && totalQuantity > 0) {
+                $('#distribution-progress-bar').removeClass('bg-primary').addClass('bg-success');
+                $('#distribution-progress-bar').text('Complete');
+                $('#partially-distributed-alert').hide();
+                $('#fully-distributed-alert').show();
+                $('#save-purchase-btn').prop('disabled', false);
+            } else {
+                $('#distribution-progress-bar').removeClass('bg-success').addClass('bg-primary');
+                $('#distribution-progress-bar').text(percentComplete + '%');
+                $('#fully-distributed-alert').hide();
+                $('#partially-distributed-alert').show();
+                $('#save-purchase-btn').prop('disabled', true);
+            }
+        }
+        
+        $('#warehouse').change(function() {
+            if ($(this).val()) {
+                var remainingText = $('#remaining-quantity').text();
+                var remaining = parseInt(remainingText);
+                if (!isNaN(remaining) && remaining > 0) {
+                    $('#quantity').val(remaining);
+                    $('#quantity').attr('max', remaining);
+                }
+            }
+        });
+
+        $('#quantity').on('input', function() {
+            var inputQty = parseInt($(this).val());
+            var maxQty = parseInt($('#remaining-quantity').text());
+            
+            if (inputQty > maxQty) {
+                $(this).val(maxQty);
+            }
+            
+            if (inputQty <= 0) {
+                $(this).val(1);
+            }
+        });
+
+        $('#distribution-form').on('submit', function() {
+            if ($('#warehouse').val() && $('#quantity').val()) {
+                $('#add-distribution-btn').addClass('disabled').html('<i class="fas fa-spinner fa-spin"></i> Adding...');
+            }
+        });
+
+        $('.remove-distribution-form').on('submit', function() {
+            $(this).find('button').addClass('disabled').html('<i class="fas fa-spinner fa-spin"></i>');
+        });
+        
+        updateRemainingQuantity();
+    });
+</script>
+{% endblock extrascripts %}
