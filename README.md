@@ -12,6 +12,7 @@ This Django application offers a solution for managing business operations with 
 - **Reporting**: Generate various reports for inventory, sales, customers, and suppliers.
 - **Multi-Warehouse Support**: Manage inventory across multiple warehouses or locations.
 - **Vietnamese Currency (VND)**: All financial transactions are handled in Vietnamese Dong.
+- **Data Export**: Export data to Excel for further analysis.
 
 ## Screenshots
 (Add screenshots of your application here)
